@@ -1,0 +1,72 @@
+name: signal9
+metadata:
+  template: signal9-rmm-agent@0.0.1-beta
+
+services:
+  hub:
+    project: ./src/Signal9.Hub
+    language: csharp
+    host: containerapp
+    hooks:
+      prebuild:
+        windows:
+          shell: pwsh
+          run: |
+            echo "Building Signal9 Hub..."
+            dotnet restore
+            dotnet build --configuration Release
+        posix:
+          shell: sh
+          run: |
+            echo "Building Signal9 Hub..."
+            dotnet restore
+            dotnet build --configuration Release
+      
+  web:
+    project: ./src/Signal9.WebPortal
+    language: csharp
+    host: containerapp
+    hooks:
+      prebuild:
+        windows:
+          shell: pwsh
+          run: |
+            echo "Building Signal9 Web Portal..."
+            dotnet restore
+            dotnet build --configuration Release
+        posix:
+          shell: sh
+          run: |
+            echo "Building Signal9 Web Portal..."
+            dotnet restore
+            dotnet build --configuration Release
+
+  functions:
+    project: ./src/Signal9.Functions
+    language: csharp
+    host: function
+    hooks:
+      prebuild:
+        windows:
+          shell: pwsh
+          run: |
+            echo "Building Signal9 Functions..."
+            dotnet restore
+            dotnet build --configuration Release
+        posix:
+          shell: sh
+          run: |
+            echo "Building Signal9 Functions..."
+            dotnet restore
+            dotnet build --configuration Release
+
+infra:
+  provider: bicep
+  path: ./infra
+  parameters:
+    sqlAdminPassword:
+      type: string
+      secret: true
+
+pipeline:
+  provider: github
