@@ -13,6 +13,9 @@ public class AgentRegistrationDto
     public string OperatingSystem { get; set; } = string.Empty;
     public string Architecture { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public DateTime LastSeen { get; set; } = DateTime.UtcNow;
+    public bool IsOnline { get; set; } = true;
+    public Guid? TenantId { get; set; }
     public Dictionary<string, string> Tags { get; set; } = new();
 }
 
@@ -23,6 +26,7 @@ public class TelemetryDto
 {
     public string AgentId { get; set; } = string.Empty;
     public string TenantCode { get; set; } = string.Empty;
+    public Guid? TenantId { get; set; }
     public DateTime Timestamp { get; set; }
     public double CpuUsage { get; set; }
     public double MemoryUsage { get; set; }
@@ -73,7 +77,7 @@ public class CommandDto
 {
     public string CommandId { get; set; } = string.Empty;
     public string CommandType { get; set; } = string.Empty;
-    public string? Parameters { get; set; }
+    public Dictionary<string, object>? Parameters { get; set; }
     public int Priority { get; set; } = 0;
     public DateTime? ExpiresAt { get; set; }
     public Dictionary<string, object> Metadata { get; set; } = new();

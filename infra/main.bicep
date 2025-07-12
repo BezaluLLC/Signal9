@@ -82,47 +82,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// Container Apps Environment
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
-  name: '${appName}-env-${resourceToken}'
-  location: location
-  tags: tags
-  properties: {
-    appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logAnalyticsWorkspace.properties.customerId
-        sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
-      }
-    }
-  }
-}
-
-// Container Registry
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: '${appName}acr${take(resourceToken, 15)}'
-  location: location
-  tags: tags
-  sku: {
-    name: 'Basic'
-  }
-  properties: {
-    adminUserEnabled: false
-  }
-}
-
-// Grant ACR Pull permissions to managed identity
-resource acrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, managedIdentity.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-  scope: containerRegistry
-  properties: {
-    principalId: managedIdentity.properties.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// SignalR Service
+// SignalR Service (configured for serverless mode)
 resource signalRService 'Microsoft.SignalRService/signalR@2023-08-01-preview' = {
   name: '${appName}-signalr-${resourceToken}'
   location: location
@@ -138,7 +98,7 @@ resource signalRService 'Microsoft.SignalRService/signalR@2023-08-01-preview' = 
     features: [
       {
         flag: 'ServiceMode'
-        value: 'Default'
+        value: 'Serverless'  // Changed to Serverless mode for Functions
       }
     ]
     cors: {
@@ -146,6 +106,22 @@ resource signalRService 'Microsoft.SignalRService/signalR@2023-08-01-preview' = 
     }
     networkACLs: {
       defaultAction: 'Allow'
+    }
+    upstream: {
+      templates: [
+        {
+          urlTemplate: 'https://${appName}-agent-func-${resourceToken}.azurewebsites.net/api/{hub}/{category}/{event}'
+          hubPattern: 'AgentHub'
+          eventPattern: '*'
+          categoryPattern: '*'
+        }
+        {
+          urlTemplate: 'https://${appName}-web-func-${resourceToken}.azurewebsites.net/api/{hub}/{category}/{event}'
+          hubPattern: 'DashboardHub'
+          eventPattern: '*'
+          categoryPattern: '*'
+        }
+      ]
     }
   }
 }
@@ -338,11 +314,43 @@ resource eventsTopic 'Microsoft.ServiceBus/namespaces/topics@2023-01-01-preview'
   }
 }
 
-// SignalR Hub Container App
-resource hubContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
-  name: '${appName}-hub-${resourceToken}'
+// Function App Service Plan
+resource functionAppServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+  name: '${appName}-functions-plan-${resourceToken}'
   location: location
-  tags: union(tags, { 'azd-service-name': 'hub' })
+  tags: tags
+  sku: {
+    name: 'Y1'
+    tier: 'Dynamic'
+  }
+  properties: {
+    reserved: false
+  }
+}
+
+// Storage Account for Function Apps
+resource functionStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: '${appName}funcst${resourceToken}'
+  location: location
+  tags: tags
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    accessTier: 'Hot'
+    allowBlobPublicAccess: false
+    minimumTlsVersion: 'TLS1_2'
+    supportsHttpsTrafficOnly: true
+  }
+}
+
+// Agent Function App (for agent communication)
+resource agentFunctionApp 'Microsoft.Web/sites@2023-01-01' = {
+  name: '${appName}-agent-func-${resourceToken}'
+  location: location
+  tags: union(tags, { 'azd-service-name': 'agent-functions' })
+  kind: 'functionapp'
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
@@ -350,72 +358,123 @@ resource hubContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
     }
   }
   properties: {
-    managedEnvironmentId: containerAppsEnvironment.id
-    configuration: {
-      activeRevisionsMode: 'Single'
-      ingress: {
-        external: true
-        targetPort: 8080
-        allowInsecure: false
-        traffic: [
-          {
-            weight: 100
-            latestRevision: true
-          }
-        ]
-        corsPolicy: {
-          allowedOrigins: ['*']
-          allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-          allowedHeaders: ['*']
-          allowCredentials: true
-        }
-      }
-      registries: [
+    serverFarmId: functionAppServicePlan.id
+    httpsOnly: true
+    siteConfig: {
+      appSettings: [
         {
-          server: containerRegistry.properties.loginServer
-          identity: managedIdentity.id
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${functionStorageAccount.name};AccountKey=${functionStorageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${functionStorageAccount.name};AccountKey=${functionStorageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: toLower('${appName}-agent-func-${resourceToken}')
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: applicationInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: applicationInsights.properties.ConnectionString
+        }
+        {
+          name: 'AzureSignalRConnectionString'
+          value: signalRService.listKeys().primaryConnectionString
+        }
+        {
+          name: 'AzureConfiguration__KeyVaultUrl'
+          value: keyVault.properties.vaultUri
         }
       ]
-    }
-    template: {
-      containers: [
-        {
-          name: 'hub'
-          image: '${containerRegistry.properties.loginServer}/signal9/hub:latest'
-          resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
-          }
-          env: [
-            {
-              name: 'ASPNETCORE_ENVIRONMENT'
-              value: environmentName
-            }
-            {
-              name: 'ConnectionStrings__SignalR'
-              value: signalRService.listKeys().primaryConnectionString
-            }
-            {
-              name: 'AzureConfiguration__KeyVaultUrl'
-              value: keyVault.properties.vaultUri
-            }
-            {
-              name: 'AzureConfiguration__ApplicationInsightsConnectionString'
-              value: applicationInsights.properties.ConnectionString
-            }
-          ]
-        }
-      ]
-      scale: {
-        minReplicas: 1
-        maxReplicas: 10
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: ['*']
+        supportCredentials: true
       }
     }
   }
 }
 
-// Web Portal Container App
-resource webPortalContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
+// Web Function App (for dashboard and user management)
+resource webFunctionApp 'Microsoft.Web/sites@2023-01-01' = {
+  name: '${appName}-web-func-${resourceToken}'
+  location: location
+  tags: union(tags, { 'azd-service-name': 'web-functions' })
+  kind: 'functionapp'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${managedIdentity.id}': {}
+    }
+  }
+  properties: {
+    serverFarmId: functionAppServicePlan.id
+    httpsOnly: true
+    siteConfig: {
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${functionStorageAccount.name};AccountKey=${functionStorageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${functionStorageAccount.name};AccountKey=${functionStorageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: toLower('${appName}-web-func-${resourceToken}')
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: applicationInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: applicationInsights.properties.ConnectionString
+        }
+        {
+          name: 'AzureSignalRConnectionString'
+          value: signalRService.listKeys().primaryConnectionString
+        }
+        {
+          name: 'AzureConfiguration__KeyVaultUrl'
+          value: keyVault.properties.vaultUri
+        }
+      ]
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: ['*']
+        supportCredentials: true
+      }
+    }
+  }
+}
+
+// Web App Service
+resource webAppService 'Microsoft.Web/sites@2023-01-01' = {
   name: '${appName}-web-${resourceToken}'
   location: location
   tags: union(tags, { 'azd-service-name': 'web' })
@@ -426,59 +485,38 @@ resource webPortalContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
     }
   }
   properties: {
-    managedEnvironmentId: containerAppsEnvironment.id
-    configuration: {
-      activeRevisionsMode: 'Single'
-      ingress: {
-        external: true
-        targetPort: 8080
-        allowInsecure: false
-        traffic: [
-          {
-            weight: 100
-            latestRevision: true
-          }
-        ]
-      }
-      registries: [
+    serverFarmId: functionAppServicePlan.id
+    httpsOnly: true
+    siteConfig: {
+      appSettings: [
         {
-          server: containerRegistry.properties.loginServer
-          identity: managedIdentity.id
+          name: 'ASPNETCORE_ENVIRONMENT'
+          value: environmentName
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: applicationInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: applicationInsights.properties.ConnectionString
+        }
+        {
+          name: 'AzureConfiguration__KeyVaultUrl'
+          value: keyVault.properties.vaultUri
+        }
+        {
+          name: 'ConnectionStrings__DefaultConnection'
+          value: 'Server=${sqlServer.properties.fullyQualifiedDomainName};Database=${sqlDatabase.name};Authentication=Active Directory Managed Identity;'
         }
       ]
-    }
-    template: {
-      containers: [
-        {
-          name: 'web'
-          image: '${containerRegistry.properties.loginServer}/signal9/web:latest'
-          resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
-          }
-          env: [
-            {
-              name: 'ASPNETCORE_ENVIRONMENT'
-              value: environmentName
-            }
-            {
-              name: 'ConnectionStrings__DefaultConnection'
-              value: 'Server=${sqlServer.properties.fullyQualifiedDomainName};Database=${sqlDatabase.name};Authentication=Active Directory Managed Identity;'
-            }
-            {
-              name: 'AzureConfiguration__KeyVaultUrl'
-              value: keyVault.properties.vaultUri
-            }
-            {
-              name: 'AzureConfiguration__ApplicationInsightsConnectionString'
-              value: applicationInsights.properties.ConnectionString
-            }
-          ]
-        }
-      ]
-      scale: {
-        minReplicas: 1
-        maxReplicas: 10
+      ftpsState: 'Disabled'
+      minTlsVersion: '1.2'
+      netFrameworkVersion: 'v8.0'
+      use32BitWorkerProcess: false
+      cors: {
+        allowedOrigins: ['*']
+        supportCredentials: true
       }
     }
   }
@@ -510,8 +548,8 @@ resource serviceBusConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@202
 }
 
 // Outputs
-output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.properties.loginServer
 output AZURE_KEY_VAULT_URL string = keyVault.properties.vaultUri
 output AZURE_APPLICATION_INSIGHTS_CONNECTION_STRING string = applicationInsights.properties.ConnectionString
-output HUB_URL string = 'https://${hubContainerApp.properties.configuration.ingress.fqdn}'
-output WEB_URL string = 'https://${webPortalContainerApp.properties.configuration.ingress.fqdn}'
+output AGENT_FUNCTION_URL string = 'https://${agentFunctionApp.properties.defaultHostName}'
+output WEB_FUNCTION_URL string = 'https://${webFunctionApp.properties.defaultHostName}'
+output WEB_URL string = 'https://${webAppService.properties.defaultHostName}'

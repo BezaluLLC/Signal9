@@ -50,7 +50,8 @@ public class SignalRConfiguration
 /// </summary>
 public class AgentConfiguration
 {
-    public string? HubUrl { get; set; }
+    public string? AgentFunctionsUrl { get; set; }
+    public string? FunctionKey { get; set; }
     public string? TenantCode { get; set; }
     public string? GroupName { get; set; }
     public int HeartbeatInterval { get; set; } = 30;
