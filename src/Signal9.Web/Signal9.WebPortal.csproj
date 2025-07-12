@@ -8,4 +8,8 @@
     <RootNamespace>Signal9.Web</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Signal9.Shared\Signal9.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

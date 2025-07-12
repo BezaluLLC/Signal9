@@ -1,7 +1,15 @@
+using Signal9.Web.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Register HTTP client for calling Azure Functions
+builder.Services.AddHttpClient<IDashboardService, DashboardService>();
+
+// Register services
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 var app = builder.Build();
 
