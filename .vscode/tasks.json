@@ -85,7 +85,7 @@
 			"args": [
 				"run",
 				"--project",
-				"src/Signal9.WebPortal"
+				"src/Signal9.Web"
 			],
 			"group": "build",
 			"problemMatcher": [

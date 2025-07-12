@@ -1,4 +1,4 @@
-namespace Signal9.WebPortal.Models;
+namespace Signal9.Web.Models;
 
 public class ErrorViewModel
 {

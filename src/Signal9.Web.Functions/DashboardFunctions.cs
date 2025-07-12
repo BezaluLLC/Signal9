@@ -225,6 +225,143 @@ public class DashboardFunctions
             return errorResponse;
         }
     }
+
+    /// <summary>
+    /// Get tenant hierarchy for multi-tenant dashboard
+    /// </summary>
+    [Function("GetTenantHierarchy")]
+    public async Task<HttpResponseData> GetTenantHierarchy(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "tenants/hierarchy")] HttpRequestData req)
+    {
+        try
+        {
+            _logger.LogInformation("Getting tenant hierarchy for dashboard");
+
+            // TODO: Replace with actual database query
+            var tenants = new[]
+            {
+                new
+                {
+                    TenantId = Guid.NewGuid(),
+                    Name = "Real Tenant 1",
+                    TenantType = "Organization",
+                    ParentTenantId = (Guid?)null,
+                    Level = 0,
+                    HierarchyPath = "Root/Real Tenant 1",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddDays(-30),
+                    MaxAgents = 100
+                },
+                new
+                {
+                    TenantId = Guid.NewGuid(),
+                    Name = "Real Site A",
+                    TenantType = "Site",
+                    ParentTenantId = (Guid?)null, // Would be set to parent tenant ID
+                    Level = 1,
+                    HierarchyPath = "Root/Real Tenant 1/Real Site A",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddDays(-15),
+                    MaxAgents = 50
+                }
+            };
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(JsonSerializer.Serialize(tenants, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting tenant hierarchy");
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync("Failed to retrieve tenant hierarchy");
+            return errorResponse;
+        }
+    }
+
+    /// <summary>
+    /// Get dashboard statistics with multi-tenant support
+    /// </summary>
+    [Function("GetDashboardStats")]
+    public async Task<HttpResponseData> GetDashboardStats(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "dashboard/stats")] HttpRequestData req)
+    {
+        try
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var tenantId = query["tenantId"];
+            
+            _logger.LogInformation("Getting dashboard stats for tenant: {TenantId}", tenantId ?? "all");
+
+            // TODO: Replace with actual database queries
+            var stats = new
+            {
+                TotalAgents = 0, // TODO: Count agents from database
+                OnlineAgents = 0, // TODO: Count online agents
+                OfflineAgents = 0, // TODO: Count offline agents
+                TotalTenants = 1, // TODO: Count tenants
+                ActiveTenants = 1, // TODO: Count active tenants
+                PendingAlerts = 0, // TODO: Count pending alerts
+                AvgCpuUsage = 0.0, // TODO: Calculate from telemetry
+                AvgMemoryUsage = 0.0 // TODO: Calculate from telemetry
+            };
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(JsonSerializer.Serialize(stats, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting dashboard stats");
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync("Failed to retrieve dashboard stats");
+            return errorResponse;
+        }
+    }
+
+    /// <summary>
+    /// Get recent activities for dashboard
+    /// </summary>
+    [Function("GetRecentActivities")]
+    public async Task<HttpResponseData> GetRecentActivities(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "activities")] HttpRequestData req)
+    {
+        try
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            var tenantId = query["tenantId"];
+            var countStr = query["count"];
+            var count = int.TryParse(countStr, out var c) ? c : 10;
+
+            _logger.LogInformation("Getting recent activities for tenant: {TenantId}, count: {Count}", tenantId ?? "all", count);
+
+            // TODO: Replace with actual activity data from database
+            var activities = new object[0]; // Empty for now - will be populated from real data
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(JsonSerializer.Serialize(activities, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting recent activities");
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync("Failed to retrieve recent activities");
+            return errorResponse;
+        }
+    }
 }
 
 /// <summary>
