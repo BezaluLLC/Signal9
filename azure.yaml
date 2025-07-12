@@ -3,46 +3,8 @@ metadata:
   template: signal9-rmm-agent@0.0.1-beta
 
 services:
-  hub:
-    project: ./src/Signal9.Hub
-    language: csharp
-    host: containerapp
-    hooks:
-      prebuild:
-        windows:
-          shell: pwsh
-          run: |
-            echo "Building Signal9 Hub..."
-            dotnet restore
-            dotnet build --configuration Release
-        posix:
-          shell: sh
-          run: |
-            echo "Building Signal9 Hub..."
-            dotnet restore
-            dotnet build --configuration Release
-      
-  web:
-    project: ./src/Signal9.WebPortal
-    language: csharp
-    host: containerapp
-    hooks:
-      prebuild:
-        windows:
-          shell: pwsh
-          run: |
-            echo "Building Signal9 Web Portal..."
-            dotnet restore
-            dotnet build --configuration Release
-        posix:
-          shell: sh
-          run: |
-            echo "Building Signal9 Web Portal..."
-            dotnet restore
-            dotnet build --configuration Release
-
-  functions:
-    project: ./src/Signal9.Functions
+  web-functions:
+    project: ./src/Signal9.Web.Functions
     language: csharp
     host: function
     hooks:
@@ -50,13 +12,51 @@ services:
         windows:
           shell: pwsh
           run: |
-            echo "Building Signal9 Functions..."
+            echo "Building Signal9 Web Functions..."
             dotnet restore
             dotnet build --configuration Release
         posix:
           shell: sh
           run: |
-            echo "Building Signal9 Functions..."
+            echo "Building Signal9 Web Functions..."
+            dotnet restore
+            dotnet build --configuration Release
+
+  agent-functions:
+    project: ./src/Signal9.Agent.Functions
+    language: csharp
+    host: function
+    hooks:
+      prebuild:
+        windows:
+          shell: pwsh
+          run: |
+            echo "Building Signal9 Agent Functions..."
+            dotnet restore
+            dotnet build --configuration Release
+        posix:
+          shell: sh
+          run: |
+            echo "Building Signal9 Agent Functions..."
+            dotnet restore
+            dotnet build --configuration Release
+      
+  web:
+    project: ./src/Signal9.Web
+    language: csharp
+    host: appservice
+    hooks:
+      prebuild:
+        windows:
+          shell: pwsh
+          run: |
+            echo "Building Signal9 Web..."
+            dotnet restore
+            dotnet build --configuration Release
+        posix:
+          shell: sh
+          run: |
+            echo "Building Signal9 Web..."
             dotnet restore
             dotnet build --configuration Release
 

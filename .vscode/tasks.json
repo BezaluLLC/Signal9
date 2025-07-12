@@ -58,27 +58,6 @@
 			"isBackground": false
 		},
 		{
-			"label": "run-hub",
-			"type": "shell",
-			"command": "dotnet",
-			"args": [
-				"run",
-				"--project",
-				"src/Signal9.Hub"
-			],
-			"group": "build",
-			"problemMatcher": [
-				"$msCompile"
-			],
-			"isBackground": true,
-			"presentation": {
-				"echo": true,
-				"reveal": "always",
-				"focus": false,
-				"panel": "dedicated"
-			}
-		},
-		{
 			"label": "run-agent",
 			"type": "shell",
 			"command": "dotnet",
@@ -121,14 +100,34 @@
 			}
 		},
 		{
-			"label": "run-functions",
+			"label": "run-rmm-functions",
 			"type": "shell",
 			"command": "func",
 			"args": [
 				"start"
 			],
 			"options": {
-				"cwd": "${workspaceFolder}/src/Signal9.Functions"
+				"cwd": "${workspaceFolder}/src/Signal9.RMM.Functions"
+			},
+			"group": "build",
+			"problemMatcher": [],
+			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "run-web-functions",
+			"type": "shell",
+			"command": "func",
+			"args": [
+				"start"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/src/Signal9.Web.Functions"
 			},
 			"group": "build",
 			"problemMatcher": [],
