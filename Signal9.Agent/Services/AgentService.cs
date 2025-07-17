@@ -93,7 +93,7 @@ public class AgentService : BackgroundService
             {
                 AgentId = _agentId,
                 TenantCode = _config.TenantCode ?? string.Empty,
-                TenantId = Guid.NewGuid(), // TODO: Get actual tenant ID from config
+                ParentId = Guid.NewGuid(), // TODO: Get actual tenant ID from config
                 MachineName = Environment.MachineName,
                 OperatingSystem = Environment.OSVersion.ToString(),
                 OSVersion = Environment.OSVersion.VersionString,
