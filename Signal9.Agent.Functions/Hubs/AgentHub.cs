@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Signal9.Shared.DTOs;
+using Signal9.Shared.DTOs.Extensions;
 using Signal9.Shared.Services;
 using System.Text.Json;
 
@@ -49,7 +50,7 @@ public class AgentHub
             var registeredAgent = await _agentService.RegisterAgentAsync(agentDto);
 
             // Generate agent configuration
-            var configuration = await _agentService.GenerateAgentConfigurationAsync(Guid.Parse(registeredAgent.Id));
+            var configuration = await _agentService.GenerateAgentConfigurationAsync(registeredAgent.Id);
 
             // Add agent to SignalR group for tenant isolation
             var tenantGroup = $"tenant-{request.ParentId}";

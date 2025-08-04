@@ -471,7 +471,7 @@
                 // Update existing device
                 var updateRequest = new AgentUpdateRequest
                 {
-                    TenantId = editingDevice.TenantId,
+                    ParentId = editingDevice.ParentId,
                     MachineName = deviceForm.MachineName,
                     Description = deviceForm.Description,
                     Tags = deviceForm.GroupName,
@@ -489,10 +489,11 @@
                     TenantCode = "default", // TODO: Get from context
                     MachineName = deviceForm.MachineName!,
                     OperatingSystem = deviceForm.OperatingSystem!,
-                    IpAddress = deviceForm.IpAddress!,
-                    Architecture = deviceForm.Architecture,
+                    OSVersion = "Unknown", // Add required property
+                    Architecture = deviceForm.Architecture ?? "x64",
+                    IpAddress = deviceForm.IpAddress,
                     Version = "1.0.0",
-                    TenantId = Guid.NewGuid() // TODO: Get from context or selection
+                    ParentId = Guid.NewGuid() // Changed from TenantId to ParentId
                 };
 
                 await DashboardService.CreateDeviceAsync(createRequest);
