@@ -7,6 +7,7 @@ using Signal9.Shared.DTOs;
 using Signal9.Shared.Models;
 using System.Text.Json;
 using System.Text;
+using Signal9.Shared.DTOs.Core;
 
 namespace Signal9.Agent.Services;    /// <summary>
     /// Main agent service that handles communication with the Agent Functions and SignalR service
