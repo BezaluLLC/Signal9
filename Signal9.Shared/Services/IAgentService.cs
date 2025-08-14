@@ -1,5 +1,5 @@
-using Signal9.Shared.DTOs;
 using Signal9.Shared.DTOs.Base;
+using Signal9.Shared.DTOs.Core;
 using Signal9.Shared.Models;
 
 namespace Signal9.Shared.Services;
@@ -47,28 +47,23 @@ public interface IAgentService
     /// <summary>
     /// Get agent telemetry data with filtering
     /// </summary>
-    Task<PagedResponse<object>> GetAgentTelemetryAsync(Guid agentId, DateTime? from = null, DateTime? to = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<PagedResponse<TelemetryDataDto>> GetAgentTelemetryAsync(Guid agentId, DateTime? from = null, DateTime? to = null, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get agent command history
     /// </summary>
-    Task<PagedResponse<object>> GetAgentCommandsAsync(Guid agentId, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
+    Task<PagedResponse<AgentCommandDto>> GetAgentCommandsAsync(Guid agentId, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Bulk operations for efficiency
+    /// Generate agent configuration
     /// </summary>
-    Task<BulkOperationResponse<object>> BulkUpdateAgentsAsync(IEnumerable<object> agents, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Universal mapping interface for flexibility
-    /// </summary>
-    TEntity MapToEntity<TDto, TEntity>(TDto dto) where TEntity : class;
+    Task<AgentConfigurationDto> GenerateAgentConfigurationAsync(Guid agentId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Bulk operation response for efficient batch processing
+/// Agent configuration response
 /// </summary>
-public record BulkOperationResponse<T> : BaseDto<Guid>
+public record AgentConfigurationDto
 {
     /// <summary>
     /// Successfully processed items
