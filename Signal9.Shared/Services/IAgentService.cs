@@ -42,7 +42,7 @@ public interface IAgentService
     /// <summary>
     /// Generate agent configuration for registration
     /// </summary>
-    Task<object> GenerateAgentConfigurationAsync(Guid agentId, CancellationToken cancellationToken = default);
+    Task<AgentConfigurationResponse> GenerateAgentConfigurationAsync(Guid agentId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get agent telemetry data with filtering
@@ -53,64 +53,4 @@ public interface IAgentService
     /// Get agent command history
     /// </summary>
     Task<PagedResponse<AgentCommandDto>> GetAgentCommandsAsync(Guid agentId, int page = 1, int pageSize = 50, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Generate agent configuration
-    /// </summary>
-    Task<AgentConfigurationDto> GenerateAgentConfigurationAsync(Guid agentId, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Agent configuration response
-/// </summary>
-public record AgentConfigurationDto
-{
-    /// <summary>
-    /// Successfully processed items
-    /// </summary>
-    public List<T> SuccessfulItems { get; init; } = new();
-    
-    /// <summary>
-    /// Failed items with error details
-    /// </summary>
-    public List<BulkOperationError<T>> FailedItems { get; init; } = new();
-    
-    /// <summary>
-    /// Overall operation status
-    /// </summary>
-    public bool IsSuccess => FailedItems.Count == 0;
-    
-    /// <summary>
-    /// Performance metrics
-    /// </summary>
-    public TimeSpan ProcessingTime { get; init; }
-    public int TotalProcessed => SuccessfulItems.Count + FailedItems.Count;
-}
-
-/// <summary>
-/// Error details for bulk operations
-/// </summary>
-public record BulkOperationError<T>
-{
-    public required T Item { get; init; }
-    public required string ErrorMessage { get; init; }
-    public string? ErrorCode { get; init; }
-    public Exception? Exception { get; init; }
-}
-
-/// <summary>
-/// Paged response wrapper for collections (legacy)
-/// </summary>
-public record PagedResponse<T> : BaseDto<Guid>
-{
-    public required IEnumerable<T> Items { get; init; }
-    public required int TotalCount { get; init; }
-    public required int PageNumber { get; init; }
-    public required int PageSize { get; init; }
-    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
-    public bool HasNextPage => PageNumber < TotalPages;
-    public bool HasPreviousPage => PageNumber > 1;
-    
-    // Additional properties for unified hierarchy support
-    public int Page => PageNumber;
 }
