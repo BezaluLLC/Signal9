@@ -10,8 +10,8 @@ using System.Text;
 using Signal9.Shared.DTOs.Core;
 
 namespace Signal9.Agent.Services;    /// <summary>
-    /// Main agent service that handles communication with the Agent Functions and SignalR service
-    /// </summary>
+                                     /// Main agent service that handles communication with the Agent Functions and SignalR service
+                                     /// </summary>
 public class AgentService(
     ILogger<AgentService> logger,
     IOptions<AgentConfiguration> config,
@@ -38,7 +38,7 @@ public class AgentService(
             {
                 // Register agent with Agent Functions
                 await RegisterWithAgentFunctions();
-                
+
                 // Connect to SignalR for real-time communication
                 await ConnectToSignalR();
 
@@ -55,7 +55,7 @@ public class AgentService(
             {
                 logger.LogError(ex, "Error in agent service execution");
                 _reconnectAttempts++;
-                
+
                 // Exponential backoff for reconnection attempts
                 var delaySeconds = Math.Min(Math.Pow(2, _reconnectAttempts), 300); // Max 5 minutes
                 var delay = TimeSpan.FromSeconds(delaySeconds);
@@ -98,11 +98,11 @@ public class AgentService(
             };
 
             var json = JsonSerializer.Serialize(registrationData, _jsonOptions);
-            
+
             // Send registration via SignalR instead of HTTP
             await _signalRConnection.InvokeAsync("register", json);
             logger.LogInformation("Agent {AgentId} registration sent via SignalR", _agentId);
-            
+
             _reconnectAttempts = 0; // Reset reconnect attempts on successful registration
         }
         catch (Exception ex)
@@ -115,7 +115,8 @@ public class AgentService(
     private async Task ConnectToSignalR()
     {
         try
-        {        _signalRConnection = new HubConnectionBuilder()
+        {
+            _signalRConnection = new HubConnectionBuilder()
             .WithUrl($"{_config.AgentFunctionsUrl}/api")
             .WithAutomaticReconnect()
             .Build();
@@ -160,13 +161,13 @@ public class AgentService(
     private void StartTimers()
     {
         // Start heartbeat timer - capture instance for fire-and-forget
-        _heartbeatTimer = new Timer(_ => 
+        _heartbeatTimer = new Timer(_ =>
         {
             Task.Run(SendHeartbeatAsync);
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(30));
 
         // Start telemetry timer - capture instance for fire-and-forget
-        _telemetryTimer = new Timer(_ => 
+        _telemetryTimer = new Timer(_ =>
         {
             Task.Run(SendTelemetryAsync);
         }, null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1));
@@ -214,7 +215,7 @@ public class AgentService(
             }
             else
             {
-                logger.LogWarning("Failed to send telemetry for agent {AgentId}. Status: {StatusCode}", 
+                logger.LogWarning("Failed to send telemetry for agent {AgentId}. Status: {StatusCode}",
                     _agentId, response.StatusCode);
             }
         }
@@ -257,7 +258,7 @@ public class AgentService(
                     break;
             }
 
-            logger.LogInformation("Command {CommandType} executed successfully with result: {Result}", 
+            logger.LogInformation("Command {CommandType} executed successfully with result: {Result}",
                 command.CommandType, result);
         }
         catch (Exception ex)
@@ -267,7 +268,7 @@ public class AgentService(
     }
 
     // Method definitions removed due to compilation conflicts
-    
+
     private async Task UpdateConfigurationAsync(object configuration)
     {
         logger.LogInformation("Updating configuration for agent {AgentId}", _agentId);
@@ -277,7 +278,7 @@ public class AgentService(
 
     private async Task CollectTelemetryAsync(string[] metrics)
     {
-        logger.LogInformation("Collecting specific telemetry metrics for agent {AgentId}: {Metrics}", 
+        logger.LogInformation("Collecting specific telemetry metrics for agent {AgentId}: {Metrics}",
             _agentId, string.Join(", ", metrics));
         await SendTelemetryAsync();
     }
