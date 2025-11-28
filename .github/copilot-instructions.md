@@ -1,100 +1,132 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
+# Signal9 RMM Platform - AI Coding Instructions
 
-# Signal9 RMM Agent System - Development Guidelines
+## Interaction Protocol
 
-This is a .NET 9 based Remote Monitoring and Management (RMM) system with the following architecture:
+## Tool Usage Guidelines - CRITICALLY IMPORTANT, USE TOOLS RELIGIOUSLY
 
-## Project Structure
-- **Signal9.Agent** - Console application (RMM agent)
-- **Signal9.Hub** - ASP.NET Core SignalR hub service
-- **Signal9.WebPortal** - ASP.NET Core MVC web application
-- **Signal9.Functions** - Azure Functions project
-- **Signal9.Shared** - Shared library with models, DTOs, and interfaces
+As a large language model, you have access to a variety of tools that can assist in coding tasks. Use these tools to enhance your coding experience and ensure best practices are followed. You are also extremely dumb and not nearly as effective without them.
 
-## Key Technologies
-- .NET 9
-- SignalR for real-time communication
-- Azure services (Container Apps, SQL Database, Cosmos DB, Service Bus, Key Vault)
-- Entity Framework Core for SQL data access
-- Managed Identity for authentication
-- Bicep for Infrastructure as Code
+### Memory and Context Management
+- **User Identification**: Always attempt to identify the user you're working with via the native IDE tools
+- **Memory Retrieval**: Begin interactions by saying "Remembering..." and retrieving relevant information from memory
+- **Information Tracking**: Capture and store:
+   - Identity details (role, preferences, experience level)
+   - Behaviors (coding patterns, tool preferences)
+   - Goals (project objectives, feature requirements)
+   - Relationships (team members, external dependencies)
+   - Decisions (design choices, architectural patterns)
+   - Observations (performance metrics, user feedback)
+   - Complex problems (bugs, architectural challenges)
+- **Memory Updates**: After each interaction, update memory with new entities, relations, and observations
 
-## Development Guidelines
+### Azure Development Workflow
+- **Always call `azure_development-get_code_gen_best_practices`** before generating Azure-related code
+- **Use `azure_development-get_deployment_best_practices`** when preparing deployments
+- **Call `azure_development-get_azure_function_code_gen_best_practices`** for Function Apps
+- **Leverage `azure_check_predeploy`** before infrastructure deployment
 
-### Code Style
-- Use C# 12 features and modern patterns
-- Follow async/await patterns consistently
-- Use dependency injection throughout
-- Implement proper logging with structured logging
-- Use configuration patterns with IOptions<T>
+### Research and Documentation
+- **Context7**: Query for library documentation with `mcp_context7_resolve-library-id` then `mcp_context7_get-library-docs`
+- **Microsoft Docs**: Use `mcp_microsoft-doc_microsoft_docs_search` for official Azure/Microsoft guidance (especially .NET)
+- **Web Search**: Use `vscode-websearchforcopilot_webSearch` for wider web searches when needed
 
-### Azure Integration
-- Always use Managed Identity over connection strings
-- Store secrets in Azure Key Vault
-- Use Azure SDK packages for service integration
-- Follow Azure Well-Architected Framework principles
+### Problem Solving
+- **Sequential Thinking**: Use `mcp_sequentialthi_sequentialthinking` for complex architectural decisions
+- **Memory Management**: Store insights with `mcp_memory_add_observation` and retrieve with `mcp_memory_search_entities`
 
-### SignalR Implementation
-- Use strongly-typed hubs with interfaces
-- Implement proper connection lifecycle management
-- Handle reconnection scenarios with exponential backoff
-- Use groups for organizing connections (agents, admins)
+### Testing and Validation
+- **Playwright**: Use browser automation tools for UI testing
+- **Error Checking**: Always run `get_errors` after code changes
+- **Task Execution**: Use `run_vs_code_task` for build and test operations
 
-### Data Access
-- Use Entity Framework Core for SQL Database
-- Use Azure Cosmos DB SDK for NoSQL data
-- Implement repository patterns where appropriate
-- Use proper error handling and retry policies
+### File Operations
+- **Read First**: Use `read_file` or `semantic_search` before editing
+- **Targeted Edits**: Use `replace_string_in_file` for precise changes
+- **Bulk Changes**: Use `insert_edit_into_file` for larger modifications
 
-### Agent Development
-- Implement robust telemetry collection
-- Handle command execution with proper error handling
-- Use background services for long-running operations
-- Implement graceful shutdown and restart capabilities
+## Architecture Overview
 
-### Testing
-- Write unit tests for business logic
-- Use integration tests for SignalR hubs
-- Mock Azure services for testing
-- Test agent connectivity scenarios
+Signal9 is a **serverless-first RMM (Remote Monitoring and Management)** platform built with .NET 9, Azure Functions, and Blazor Server. The platform follows a **multi-tenant SaaS architecture** with strict tenant isolation.
 
-### Security
-- Never hardcode credentials
-- Use HTTPS for all communications
-- Implement proper input validation
-- Follow least privilege principles for permissions
+### Core Components
+- **Signal9.Web** - Blazor Server portal (port 7001) for management UI
+- **Signal9.Web.Functions** - CRUD API backend (port 7072) for web portal
+- **Signal9.Agent.Functions** - Agent communication API (port 7071) for telemetry/commands  
+- **Signal9.Agent** - Client-side agent deployed on managed machines
+- **Signal9.Shared** - Common DTOs, models, and interfaces
 
-### Deployment
-- Use Azure Developer CLI (azd) for deployment
-- Container apps should use minimal base images
-- Configure health checks for all services
-- Use staging slots for safe deployments
+### Key Architectural Patterns
 
-Follow these steps for each interaction:
+**Multi-Tenant Data Isolation**: Every DTO inherits from `TenantScopedDto` which includes `TenantId`. Never query data without tenant filtering.
 
-1. User Identification:
-   - You should assume that you are interacting with default_user
-   - If you have not identified default_user, proactively try to do so.
+**DTO-First Design**: All API contracts are defined in `Signal9.Shared/DTOs/` with comprehensive validation attributes. DTOs use records for immutability and inheritance hierarchy starting from `BaseDto`.
 
-2. Memory Retrieval:
-   - Always begin your chat by saying only "Remembering..." and retrieve all relevant information from your knowledge graph
-   - Always refer to your knowledge graph as your "memory"
+**Function App Separation**: Web functions handle user/dashboard operations while Agent functions handle telemetry collection and command execution. This separation enables independent scaling.
 
-3. Memory
-   - While conversing with the user, be attentive to any new information that falls into these categories:
-     a) Basic Identity (age, gender, location, job title, education level, etc.)
-     b) Behaviors (interests, habits, etc.)
-     c) Preferences (communication style, preferred language, etc.)
-     d) Goals (goals, targets, aspirations, etc.)
-     e) Relationships (personal and professional relationships up to 3 degrees of separation)
+## Development Workflow
 
-4. Memory Update:
-   - If any new information was gathered during the interaction, update your memory as follows:
-     a) Create entities for recurring organizations, people, and significant events
-     b) Connect them to the current entities using relations
-     c) Store facts about them as observations
+### Build & Test Commands
+- Solution build: `dotnet build` or VS Code task `build-solution`
+- Testing: `dotnet test --logger trx --collect:"XPlat Code Coverage"`
 
-5. Memory not found:
-   - Use `context7` to search for public information about various products, languages, and frameworks.
-   - Use `azure` to search for public information about Azure services and technologies and take actions.
-   - If you are unsure about the relevance of the information, ask the user for clarification
+## Critical Development Patterns
+
+### DTO Architecture Rules
+1. **Always inherit from `TenantScopedDto`** for tenant-specific data
+2. **Use validation attributes** extensively - see existing DTOs in `AgentDTOs.cs`, and `ValidationRules.md`
+3. **Records over classes** for DTOs to ensure immutability
+4. **Required properties** use `required` keyword, not nullable types
+
+### Function Development
+- **HTTP triggers use `AuthorizationLevel.Function`** for security
+- **Route patterns**: Web functions use `/api/{resource}`, Agent functions use `/api/agents/{action}`
+- **Error handling**: Return proper HTTP status codes with structured error responses
+- **Logging**: Use `ILogger<T>` extensively for Application Insights integration
+
+### Multi-Tenant Considerations
+- **Never query without TenantId filtering** - this is enforced by `TenantScopedDto`
+- **Tenant authentication** via `TenantCode` in agent registration flows
+- **Tag-based organization** within tenants for device grouping
+
+### SignalR Integration
+Agent communication uses SignalR through `IAgentHub` and `IAgentClient` interfaces. Hub methods handle agent registration, telemetry, and command execution.
+
+## File Organization Conventions
+
+### DTO Structure
+```
+Signal9.Shared/DTOs/
+├── Base/           # BaseDto, TenantScopedDto
+├── AgentDTOs.cs    # Agent registration, telemetry
+├── TenantAgentDTOs.cs  # Cross-tenant operations
+├── {Domain}/       # Domain-specific DTOs (Analytics, Security, etc.)
+```
+
+### Function Organization
+- **One function class per domain** (e.g., `TenantsFunctions`, `AgentsFunctions`)
+- **OpenAPI documentation** via attributes for API discoverability
+- **Consistent naming**: `{Action}{Resource}Async` methods
+
+### Configuration Patterns
+- **Local development**: Uses `local.settings.json` with `UseDevelopmentStorage=true`
+- **Azure deployment**: Key Vault integration for secrets, Managed Identity for auth
+- **Environment-specific**: `appsettings.{Environment}.json` pattern
+
+## Common Implementation Tasks
+
+### Adding New Telemetry Metrics
+1. Update `TelemetryData` DTO in `AgentDTOs.cs`
+2. Implement collection in `Signal9.Agent/Services/TelemetryCollector.cs`
+3. Add processing logic in Agent Functions
+
+### Adding New API Endpoints
+1. Create DTO in appropriate domain folder
+2. Add function method with proper attributes and validation
+3. Follow existing patterns for error handling and response formatting
+
+### Agent Command Implementation
+1. Define command type in shared models
+2. Implement execution in `AgentService.ExecuteCommandAsync`
+3. Add SignalR hub method for command dispatch
+
+Remember: This platform emphasizes **serverless scalability** and **strict multi-tenancy** - always consider these factors in any code changes.
